@@ -74,6 +74,7 @@
 //! ```
 
 #![cfg_attr(not(doc), no_std)]
+#![allow(clippy::transmutes_expressible_as_ptr_casts)]
 
 use core::mem;
 

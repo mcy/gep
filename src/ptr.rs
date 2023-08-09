@@ -206,7 +206,7 @@ impl<T: ?Sized> Ptr<T> {
   ///   Ptr::from(&x).to_non_null(),
   ///   Some(NonNull::from(&x)),
   /// );
-  /// 
+  ///
   /// assert!(Ptr::<i32>::null().to_non_null().is_none());
   /// ```
   pub const fn to_non_null(self) -> Option<NonNull<T>> {
@@ -223,14 +223,14 @@ impl<T: ?Sized> Ptr<T> {
   /// # use gep::*;
   /// let x = 1997;
   /// let p = Ptr::from(&x);
-  /// 
+  ///
   /// assert!(!p.is_null());
   /// assert_eq!(
   ///   unsafe { Ptr::from(&x).to_non_null_unchecked() },
   ///   NonNull::from(&x),
   /// );
   /// ```
-  /// 
+  ///
   /// # Safety
   ///
   /// [`Ptr::is_null()`] must return false for this pointer.
@@ -246,14 +246,14 @@ impl<T: ?Sized> Ptr<T> {
   ///
   /// Note that `U: Sized`, because creating a pointer to an unsized type
   /// requires extra metadata (and no stable API exists to do so yet).
-  /// 
+  ///
   /// ```
   /// # use gep::*;
   /// let x = -1;
   /// let y = unsafe {
   ///   Ptr::from(&x).cast::<u32>().read()
   /// };
-  /// 
+  ///
   /// assert_eq!(y, !0);
   /// ```
   pub const fn cast<U>(self) -> Ptr<U> {
@@ -271,10 +271,10 @@ impl<T: ?Sized> Ptr<T> {
   /// # use gep::*;
   /// let x = -1;
   /// let p = Ptr::from(&x).cast::<u32>();
-  /// 
+  ///
   /// assert_eq!(unsafe { p.deref() }, &!0);
   /// ```
-  /// 
+  ///
   /// # Safety
   ///
   /// This operation is equivalent to dereferencing a raw pointer. The following
@@ -322,10 +322,10 @@ impl<T: ?Sized> Ptr<T> {
   /// let mut x = 0;
   /// let p = Ptr::from(&mut x).cast::<u32>();
   /// *unsafe { p.deref_mut() } = !0;
-  /// 
+  ///
   /// assert_eq!(x, -1);
   /// ```
-  /// 
+  ///
   /// # Safety
   ///
   /// This operation is equivalent to dereferencing a raw pointer. The following
@@ -334,6 +334,7 @@ impl<T: ?Sized> Ptr<T> {
   /// `self` must be non-null, well-aligned, and refer to memory appropriately
   /// initialized for `T`; also, it must not create a reference that aliases any
   /// active `&mut U`.
+  #[allow(clippy::mut_from_ref)]
   pub unsafe fn deref_mut(&self) -> &mut T {
     self.deref_mut_unbound()
   }
@@ -367,30 +368,30 @@ impl<T: ?Sized> Ptr<T> {
   ///     Self(c)
   ///   }
   /// }
-  /// 
+  ///
   /// impl Drop for Handle<'_> {
   ///   fn drop(&mut self) {
   ///     self.0.set(self.0.get() - 1);
   ///   }
   /// }
-  /// 
+  ///
   /// let counter = Cell::new(0);
   /// let mut handle = Handle::new(&counter);
-  /// 
+  ///
   /// assert_eq!(counter.get(), 1);
-  /// 
+  ///
   /// let p = Ptr::from(&mut handle);
   /// unsafe {
   ///   p.destroy();
   ///   p.write(Handle::new(&counter));
   /// }
-  /// 
+  ///
   /// assert_eq!(counter.get(), 1);
   /// ```
-  /// 
+  ///
   /// Tip: given a `Ptr<T>`, you can destroy an array of `n` of them with
   /// `ptr.to_slice(n).destroy()`.
-  /// 
+  ///
   /// # Safety
   ///
   /// This operation is equivalent to dereferencing a raw pointer. The following
@@ -411,7 +412,7 @@ impl<T> Ptr<T> {
   }
 
   /// Creates a new, non-null, dangling pointer.
-  /// 
+  ///
   /// ```
   /// # use gep::*;
   /// assert_ne!(Ptr::<i32>::null(), Ptr::<i32>::dangling());
@@ -433,15 +434,15 @@ impl<T> Ptr<T> {
   /// ```
   /// # use gep::*;
   /// const KEY: usize = 0xf0f0f0f0f0f0f0f0;
-  /// 
+  ///
   /// let x = 1997;
   /// let p = Ptr::from(&x);
   /// let addr = p.expose_addr() ^ KEY;
-  /// 
+  ///
   /// let q = Ptr::<i32>::from_exposed_addr(addr ^ KEY);
   /// assert_eq!(p, q);
   /// ```
-  /// 
+  ///
   /// Compare [`std::ptr::from_exposed_addr()`].
   pub const fn from_exposed_addr(addr: usize) -> Self {
     Ptr { p: addr as *mut T }
@@ -464,14 +465,14 @@ impl<T> Ptr<T> {
   }
 
   /// Returns whether this pointer is appropriately aligned for its type.
-  /// 
+  ///
   /// ```
   /// # use gep::*;
   /// # use gep::offset::ByteOffset;
   /// let x = 1997;
   /// let p = Ptr::from(&x);
   /// let q = unsafe { p.at(ByteOffset(1)) };
-  /// 
+  ///
   /// assert!(p.is_aligned());
   /// assert!(!q.is_aligned());
   /// ```
@@ -486,14 +487,14 @@ impl<T> Ptr<T> {
 
   /// Returns this pointer's "address misalignment"; i.e., its address modulo
   /// the pointee type's alignment.
-  /// 
+  ///
   /// ```
   /// # use gep::*;
   /// # use gep::offset::ByteOffset;
   /// let x = 1997;
   /// let p = Ptr::from(&x);
   /// let q = unsafe { p.at(ByteOffset(1)) };
-  /// 
+  ///
   /// assert_eq!(p.misalignment(), 0);
   /// assert_eq!(q.misalignment(), 1);
   /// ```
@@ -503,14 +504,14 @@ impl<T> Ptr<T> {
   }
 
   /// Makes this pointer well-aligned by rounding its address down.
-  /// 
+  ///
   /// ```
   /// # use gep::*;
   /// # use gep::offset::ByteOffset;
   /// let x = [1997, 42];
   /// let p = Ptr::from(&x).element();
   /// let q = unsafe { p.at(ByteOffset(1)) };
-  /// 
+  ///
   /// unsafe {
   ///   assert_eq!(p.align_down().read(), 1997);
   ///   assert_eq!(q.align_down().read(), 1997);
@@ -522,14 +523,14 @@ impl<T> Ptr<T> {
   }
 
   /// Makes this pointer well-aligned by rounding its address up.
-  /// 
+  ///
   /// ```
   /// # use gep::*;
   /// # use gep::offset::ByteOffset;
   /// let x = [1997, 42];
   /// let p = Ptr::from(&x).element();
   /// let q = unsafe { p.at(ByteOffset(1)) };
-  /// 
+  ///
   /// unsafe {
   ///   assert_eq!(p.align_up().read(), 1997);
   ///   assert_eq!(q.align_up().read(), 42);
@@ -558,7 +559,7 @@ impl<T> Ptr<T> {
   ///   assert_eq!(p.at(ByteOffset(4)).read(), 42);
   /// }
   /// ```
-  /// 
+  ///
   /// If an [`offset::Field`] is passed in as the offset, it will compute the
   /// address of that field within the pointer. If it's a negative field
   /// offset, it will treat this as a pointer to a field and compute the address
@@ -572,17 +573,17 @@ impl<T> Ptr<T> {
   ///   a: u8,
   ///   bar: Bar,
   /// }
-  /// 
+  ///
   /// struct Bar(i32, i32, i32);
-  /// 
+  ///
   /// let x = Foo { a: 5, bar: Bar(-1, -2, -3) };
   /// let p = Ptr::from(&x);
-  /// 
+  ///
   /// unsafe {
   ///   assert_eq!(p.at(field!(Foo.bar.2)).read(), -3);
   /// }
   /// ```
-  /// 
+  ///
   /// [`offset::NotInBounds`] can be used to disable out-of-bounds undefined
   /// behavior for this function, but the resulting pointer may be invalid for
   /// reads and writes.
@@ -600,7 +601,7 @@ impl<T> Ptr<T> {
   ///   assert_eq!(valid_again.read(), 42);
   /// }
   /// ```
-  /// 
+  ///
   /// # Safety
   ///
   /// See the safety doc for [`offset::Measurement::apply()`].
@@ -625,7 +626,7 @@ impl<T> Ptr<T> {
   ///   assert_eq!(p.at_raw(m).read(), 42);
   /// }
   /// ```
-  /// 
+  ///
   /// # Safety
   ///
   /// See the safety doc for [`offset::Measurement::apply()`].
@@ -656,10 +657,10 @@ impl<T> Ptr<T> {
   /// # use gep::*;
   /// let x = 1997;
   /// let p = Ptr::from(&x);
-  /// 
+  ///
   /// assert_eq!(unsafe { p.read() }, 1997);
   /// ```
-  /// 
+  ///
   /// # Safety
   ///
   /// This operation is equivalent to dereferencing a raw pointer. The following
@@ -687,10 +688,10 @@ impl<T> Ptr<T> {
   ///   name: String,
   ///   health: f32,
   /// }
-  /// 
+  ///
   /// let x = Player { name: "Gep".into(), health: 20.0 };
   /// let p = Ptr::from(&x);
-  /// 
+  ///
   /// unsafe {
   ///   assert_eq!(p.read_at(field!(Player.health)), 20.0);
   /// }
@@ -713,7 +714,7 @@ impl<T> Ptr<T> {
   /// # use gep::*;
   /// let mut x = 1997;
   /// let p = Ptr::from(&mut x);
-  /// 
+  ///
   /// unsafe { p.write(42); }
   /// assert_eq!(x, 42);
   /// ```
@@ -745,10 +746,10 @@ impl<T> Ptr<T> {
   ///   name: String,
   ///   health: f32,
   /// }
-  /// 
+  ///
   /// let mut x = Player { name: "Gep".into(), health: 20.0 };
   /// let p = Ptr::from(&mut x);
-  /// 
+  ///
   /// unsafe {
   ///   p.write_at(field!(Player.health), 30.0);
   /// }
@@ -764,12 +765,12 @@ impl<T> Ptr<T> {
   }
 
   /// Zeroes the value at `self`.
-  /// 
+  ///
   /// ```
   /// # use gep::*;
   /// let mut x = 1997;
   /// let p = Ptr::from(&mut x);
-  /// 
+  ///
   /// unsafe { p.clear_to_zero(); }
   /// assert_eq!(x, 0);
   /// ```
@@ -786,17 +787,17 @@ impl<T> Ptr<T> {
   /// Zeroes the value at `self`.
   ///
   /// This is a convenience function for zeroing at a specified offset.
-  /// 
+  ///
   /// ```
   /// # use gep::*;
   /// struct Player {
   ///   name: String,
   ///   health: f32,
   /// }
-  /// 
+  ///
   /// let mut x = Player { name: "Gep".into(), health: 20.0 };
   /// let p = Ptr::from(&mut x);
-  /// 
+  ///
   /// unsafe {
   ///   p.clear_to_zero_at(field!(Player.health));
   /// }
@@ -826,12 +827,12 @@ impl<T> Ptr<T> {
   /// Replaces the value at `self`.
   ///
   /// This is like [`Ptr::read()`], but it writes a new value after reading.
-  /// 
+  ///
   /// ```
   /// # use gep::*;
   /// let mut x = 1997;
   /// let p = Ptr::from(&mut x);
-  /// 
+  ///
   /// unsafe {
   ///   assert_eq!(p.replace(42), 1997);
   /// }
@@ -850,17 +851,17 @@ impl<T> Ptr<T> {
   /// Replaces the value at `self`.
   ///
   /// This is a convenience function for replacing at a specified offset.
-  /// 
+  ///
   /// ```
   /// # use gep::*;
   /// struct Player {
   ///   name: String,
   ///   health: f32,
   /// }
-  /// 
+  ///
   /// let mut x = Player { name: "Gep".into(), health: 20.0 };
   /// let p = Ptr::from(&mut x);
-  /// 
+  ///
   /// unsafe {
   ///   assert_eq!(p.replace_at(field!(Player.health), 30.0), 20.0);
   /// }
@@ -879,17 +880,17 @@ impl<T> Ptr<T> {
   /// Dereferences `self.at(idx)`, producing a reference.
   ///
   /// This is a convenience function for deref-ing at a specified offset.
-  /// 
+  ///
   /// ```
   /// # use gep::*;
   /// struct Player {
   ///   name: String,
   ///   health: f32,
   /// }
-  /// 
+  ///
   /// let mut x = Player { name: "Gep".into(), health: 20.0 };
   /// let p = Ptr::from(&mut x);
-  /// 
+  ///
   /// let name = unsafe { p.deref_at(field!(Player.name)) };
   /// assert_eq!(name, "Gep");
   /// ```
@@ -918,23 +919,23 @@ impl<T> Ptr<T> {
   /// Dereferences `self.at(idx)`, producing a mutable reference.
   ///
   /// This is a convenience function for deref-ing at a specified offset.
-  /// 
+  ///
   /// ```
   /// # use gep::*;
   /// struct Player {
   ///   name: String,
   ///   health: f32,
   /// }
-  /// 
+  ///
   /// let mut x = Player { name: "Gep".into(), health: 20.0 };
   /// let p = Ptr::from(&mut x);
-  /// 
+  ///
   /// {
   ///   let name = unsafe { p.deref_mut_at(field!(Player.name)) };
   ///   name.clear();
   ///   name.push_str("Jim");
   /// }
-  /// 
+  ///
   /// assert_eq!(x.name, "Jim")
   /// ```
   ///
@@ -942,6 +943,7 @@ impl<T> Ptr<T> {
   ///
   /// The requirements of [`Ptr::at()`] must be satisfied, as well as those
   /// [`Ptr::deref_mut()`] (on the result of the pointer arithmetic operation).
+  #[allow(clippy::mut_from_ref)]
   pub unsafe fn deref_mut_at<U>(&self, idx: impl Offset<T, U>) -> &mut U {
     self.at(idx).deref_mut_unbound()
   }
@@ -965,12 +967,12 @@ impl<T> Ptr<T> {
 
 impl<T> Ptr<[T]> {
   /// Flattens this pointer into a pointer to the first element.
-  /// 
+  ///
   /// ```
   /// # use gep::*;
   /// let x = [1, 2, 3];
   /// let p = Ptr::from(&x[..]);
-  /// 
+  ///
   /// assert_eq!(p.element(), Ptr::from(&x[0]));
   /// ```
   pub const fn element(self) -> Ptr<T> {
@@ -980,12 +982,12 @@ impl<T> Ptr<[T]> {
 
 impl<T, const N: usize> Ptr<[T; N]> {
   /// Flattens this pointer into a pointer to the first element.
-  /// 
+  ///
   /// ```
   /// # use gep::*;
   /// let x = [1, 2, 3];
   /// let p = Ptr::from(&x);
-  /// 
+  ///
   /// assert_eq!(p.element(), Ptr::from(&x[0]));
   /// ```
   pub const fn element(self) -> Ptr<T> {

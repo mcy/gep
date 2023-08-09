@@ -195,7 +195,7 @@ impl<T: ?Sized, U: ?Sized> Field<T, U> {
   #[doc(hidden)]
   pub fn __new_for_macro(n: isize, _: *const T, _: *const U) -> Self {
     Self {
-      offset: n as isize,
+      offset: n,
       _ph: PhantomData,
     }
   }

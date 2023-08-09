@@ -99,7 +99,7 @@ impl<T: ?Sized> From<&mut T> for NonNull<T> {
 
 impl<T: ?Sized> From<ptr::NonNull<T>> for NonNull<T> {
   fn from(value: ptr::NonNull<T>) -> Self {
-    Self::new(value.into())
+    Self::new(value)
   }
 }
 
