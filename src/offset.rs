@@ -187,15 +187,40 @@ impl_offset! {
 /// The [`field!()`][crate::field] macro can be used to create new field offsets.
 pub struct Field<T: ?Sized, U: ?Sized> {
   offset: isize,
-  _ph: PhantomData<for<'a> fn(&T) -> &U>,
+  _ph: PhantomData<fn(&T) -> &U>,
 }
 
-#[doc(hidden)]
 impl<T: ?Sized, U: ?Sized> Field<T, U> {
   #[doc(hidden)]
-  pub fn __new_for_macro(n: isize, _: *const T, _: *const U) -> Self {
+  pub const unsafe fn __new_for_macro(
+    n: isize,
+    _: *const T,
+    _: *const U,
+  ) -> Self {
     Self {
       offset: n,
+      _ph: PhantomData,
+    }
+  }
+
+  /// Adds two compatible field offsets together.
+  ///
+  /// This function primarily exists for `const`; in general, prefer to use `+`
+  /// instead.
+  pub const fn then<V: ?Sized>(self, that: Field<U, V>) -> Field<T, V> {
+    Field {
+      offset: self.offset + that.offset,
+      _ph: PhantomData,
+    }
+  }
+
+  /// Returns a field offset that is the reverse of `self`.
+  ///
+  /// This function primarily exists for `const`; in general, prefer to use `-`
+  /// instead.
+  pub const fn rev(self) -> Field<U, T> {
+    Field {
+      offset: -self.offset,
       _ph: PhantomData,
     }
   }
@@ -204,7 +229,7 @@ impl<T: ?Sized, U: ?Sized> Field<T, U> {
 impl<T: ?Sized> Field<T, T> {
   /// Returns a `Field` that treats a value as its own first field (and, thus
   /// with an offset of zero).
-  pub fn this() -> Self {
+  pub const fn this() -> Self {
     Self {
       offset: 0,
       _ph: PhantomData,
@@ -213,37 +238,24 @@ impl<T: ?Sized> Field<T, T> {
 }
 
 impl<T, const N: usize> Field<[T; N], T> {
+  #[doc(hidden)]
+  pub const unsafe fn __index_for_macro(n: usize) -> Self {
+    assert!(n < N, "index out of bounds");
+    Self {
+      offset: (n * mem::size_of::<T>()) as isize,
+      _ph: PhantomData,
+    }
+  }
+
   /// Returns a `Field` that indexes into a an array.
   ///
   /// # Panics
   ///
   /// Panics if `n >= N`.
   pub fn index(n: usize) -> Self {
-    assert!(n < N, "index out of bounds: {n} >= {N}");
+    assert!(n < N, "index out of bounds: {n} < {N}");
     Self {
       offset: (n * mem::size_of::<T>()) as isize,
-      _ph: PhantomData,
-    }
-  }
-}
-
-impl<T: ?Sized, U: ?Sized, V: ?Sized> ops::Add<Field<U, V>> for Field<T, U> {
-  type Output = Field<T, V>;
-
-  fn add(self, that: Field<U, V>) -> Self::Output {
-    Field {
-      offset: self.offset + that.offset,
-      _ph: PhantomData,
-    }
-  }
-}
-
-impl<T: ?Sized, U: ?Sized> ops::Neg for Field<T, U> {
-  type Output = Field<U, T>;
-
-  fn neg(self) -> Self::Output {
-    Field {
-      offset: -self.offset,
       _ph: PhantomData,
     }
   }
@@ -282,14 +294,17 @@ impl<T: ?Sized, U: ?Sized> fmt::Debug for Field<T, U> {
 /// path components of either the form `.foo` or `[idx]`. For example,
 /// `field!(MyType.field)`, `field!([i32; 5][3])`, or `field!((u8, u8).0)`.
 ///
+/// This macro always expands to a constant expression.
+///
 /// ```
 /// # use gep::offset::Field;
+/// # use gep::field;
 /// struct Foo {
 ///   a: i32,
 ///   b: [i32; 3],
 /// }
 ///
-/// let f: Field<_, i32> = gep::field!((i32, Foo).1.b[1]);
+/// const OFFSET: Field<(i32, Foo), i32> = field!((i32, Foo).1.b[1]);
 /// ```
 #[macro_export]
 macro_rules! field {
@@ -298,8 +313,9 @@ macro_rules! field {
     let field = unsafe { core::ptr::addr_of!((*base).$field) };
     let offset = unsafe { field.cast::<u8>().offset_from(base.cast::<u8>()) };
 
-    $crate::offset::Field::__new_for_macro(offset, base, field)
-      + $crate::field!(@impl field, $($($path)+)?)
+    unsafe {
+      $crate::offset::Field::__new_for_macro(offset, base, field)
+    }.then($crate::field!(@impl field, $($($path)+)?))
   }};
 
   (@impl $base:expr, [$idx:expr] $($($path:tt)+)?) => {{
@@ -307,8 +323,9 @@ macro_rules! field {
     let base = $base;
     let field = unsafe { core::ptr::addr_of!((*base)[idx]) };
 
-    $crate::offset::Field::index(idx)
-      + $crate::field!(@impl field, $($($path)+)?)
+    unsafe {
+      $crate::offset::Field::__index_for_macro(idx)
+    }.then($crate::field!(@impl field, $($($path)+)?))
   }};
 
   (@impl $base:expr,) => {{
@@ -324,4 +341,30 @@ macro_rules! field {
     let uninit = core::mem::MaybeUninit::<$($ty)::+>::uninit();
     $crate::field!(@impl uninit.as_ptr(), $($path)+)
   }};
+}
+
+// Field offset arithmetic impls.
+
+impl<T: ?Sized, U: ?Sized, V: ?Sized> ops::Add<Field<U, V>> for Field<T, U> {
+  type Output = Field<T, V>;
+
+  fn add(self, that: Field<U, V>) -> Self::Output {
+    self.then(that)
+  }
+}
+
+impl<T: ?Sized, U: ?Sized, V: ?Sized> ops::Sub<Field<V, U>> for Field<T, U> {
+  type Output = Field<T, V>;
+
+  fn sub(self, that: Field<V, U>) -> Self::Output {
+    self + -that
+  }
+}
+
+impl<T: ?Sized, U: ?Sized> ops::Neg for Field<T, U> {
+  type Output = Field<U, T>;
+
+  fn neg(self) -> Self::Output {
+    self.rev()
+  }
 }
