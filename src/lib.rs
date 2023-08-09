@@ -1,4 +1,4 @@
-//! `gep`, a pointer arithmetic library.
+//! `gep`, a better pointer arithmetic library.
 //!
 //! The name `gep` comes from LLVM's `getelementptr` instruction, the infamous
 //! pointer arithmetic operation.

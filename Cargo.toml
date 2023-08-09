@@ -2,3 +2,10 @@
 name = "gep"
 version = "0.1.0"
 edition = "2021"
+
+authors = ["Miguel Young de la Sota <mcyoung@mit.edu>"]
+description = "`gep`, a better pointer arithmetic library."
+homepage = "https://github.com/mcy/gep"
+repository = "https://github.com/mcy/gep"
+
+license = "Apache-2.0"
